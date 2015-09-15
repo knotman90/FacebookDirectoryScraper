@@ -20,3 +20,12 @@ executable FacebookDirectoryScraper
   build-depends:       base >=4.6 && <4.7, random >=1.0 && <1.1, process >=1.3 && <1.4, hxt >=9.3 && <9.4, HandsomeSoup >=0.4 && <0.5, MissingH >=1.3 && <1.4, filepath >=1.4 && <1.5, directory >=1.2 && <1.3, network-uri >=2.6, containers
   hs-source-dirs:      source
   default-language:    Haskell2010
+
+
+executable ScraperWorker
+  main-is:             FacebookScraperMain.hs
+  -- other-modules:       
+  -- other-extensions:    
+  build-depends:       base >=4.6 && <4.7, random >=1.0 && <1.1, process >=1.3 && <1.4, hxt >=9.3 && <9.4, HandsomeSoup >=0.4 && <0.5, MissingH >=1.3 && <1.4, filepath >=1.4 && <1.5, directory >=1.2 && <1.3, network-uri >=2.6, containers
+  hs-source-dirs:      source
+  default-language:    Haskell2010

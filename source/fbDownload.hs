@@ -1,6 +1,7 @@
 
 import DirectoryUtils
 import System.Environment (getArgs)
+import System.Process (proc,createProcess,getProcessExitCode)
 import Control.Monad
 import FacebookScraper
 import FacebookScraperGlobalDefinitions
@@ -8,6 +9,8 @@ import FacebookDirectoryUtils
 import Data.Sequence as Seq
 import Prelude as Pre
 import System.Process (ProcessHandle)  
+import TorManager(getPid)
+import Data.List as List
 
 putListLn ::(Show a,Show b, Show c)=> [a] -> [b] -> c -> IO ()
 putListLn parameters parameterNames separator= do
@@ -25,21 +28,54 @@ printPairWithSeparator sep (f,s) = do
 parameterNames :: [String]
 parameterNames = ["Number of Concurrent scrapers","Scrapers root directory","Threashold for scrapers startup"]
 
-
+{-
 mayLaunchParallelWork :: Int -> Int ->[FBURI] -> Bool
 mayLaunchParallelWork numScrapers threasholdScrapLaunch uris
 	| Pre.length uris < numScrapers = False
-	| otherwise =  all canOffloadFBURI (Pre.take numScrapers uris) 
-	where 
-		canOffloadFBURI e= (not (isLastLevel e)) && ((getNumberOfLinkedURI e) < threasholdScrapLaunch)
+	| otherwise =  all canOffloadFBURI (Pre.take numScrapers uris) -}
+
+canOffloadFBURI :: Int-> FBURI -> Bool
+canOffloadFBURI threasholdScrapLaunch e = ((getNumberOfLinkedURI e) < threasholdScrapLaunch) {- (not (isLastLevel e)) && -} 
 		
-type PROC_DESCRIPTOR = (PID, (ProcessHandle, ScraperID))
+type PROC_DESCRIPTOR = (ScraperID, (ProcessHandle, PID))
+
 masterLoop ::PROC_DESCRIPTOR -> [FBURI] -> Int -> Int -> Seq (Either ScraperID PROC_DESCRIPTOR) -> IO ()
-masterLoop _ [] _ _ = undefined
-masterLoop pd l@(url:urls) numScrapers threasholdScrapLaunch 
-		| mayLaunchParallelWork numScrapers  threasholdScrapLaunch l = undefined
-		| otherwise = undefined
+masterLoop _ [] _ _ _= return ()
+masterLoop pd l@(url:urls) numScrapers threasholdScrapLaunch processes = do
+		let (offloadableURIs,notOffloadableURIs) = List.partition (canOffloadFBURI threasholdScrapLaunch) l
+		if Pre.length offloadableURIs < numScrapers 
+		then undefined --download some links from notOffloadableURIs
+		else do --have enough links to feed processes
+				let idxTerminated = Seq.findIndexL (isLeft) processes
+				case idxTerminated of
+					--all process busy
+					Nothing -> 	undefined								
+					-- process at index idx is ready to do some work
+					(Just idx) -> undefined --if canOffloadFBURI url
+					
+--left means is not running
+--right means is still running
+isProcessStillRunning :: PROC_DESCRIPTOR -> IO (Either ScraperID PROC_DESCRIPTOR)
+isProcessStillRunning pd@(scraperID, (ph, _)) =  do
+									exitCode <- getProcessExitCode ph
+									case exitCode  of
+										Nothing  -> return $ Right pd
+										_		 -> return $ Left  scraperID
 			
+																
+		
+launchNewProcess :: FBURI -> ScraperID -> IO (ProcessHandle,PID)
+launchNewProcess uri scrapID = do
+				(_,_,_,ph)<-createProcess (proc "ScraperWorker" [uri,"inputFile",getWorkerFileName uri,show scrapID])
+				(_,maybePid) <- getPid ph
+				case maybePid of 
+					Nothing -> error "error retriving the pid"
+					(Just pid) -> return (ph, (read.show) pid) 
+				
+--masterLoopPause = 2*10^6
+
+isLeft (Left _) = True
+isLeft _ 		= False
 
 main = do
 	[numScrapers,scraperRoot,threasholdScrapLaunch]<-getArgs
