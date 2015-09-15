@@ -12,7 +12,6 @@ import System.Environment
 
 import System.Process (ProcessHandle,readProcessWithExitCode)  
 
-
 import System.Exit(ExitCode( ExitFailure, ExitSuccess))
 import Text.Printf (printf)
 
@@ -36,7 +35,7 @@ randomDelay = do
 			delayUpperBound = 0.1::Double 
 			
 	
-downPageCurl :: (ScraperID,(ProcessHandle,PID))  -> String -> IO String
+downPageCurl :: (ScraperID,(ProcessHandle,PID))  -> FBURI -> IO String
 downPageCurl (scrapID,pd) page  = case isURI page of
 						True -> do
 							usrAgnt<-randomUserAgent
@@ -91,7 +90,7 @@ main = do
 catchAny :: IO a -> (SomeException -> IO a) -> IO a
 catchAny = Control.Exception.catch
 
-downItAll :: (PID, (ProcessHandle, Int)) -> [String] -> FilePath -> FilePath-> IO ()
+downItAll :: (PID, (ProcessHandle, Int)) -> [FBURI] -> FilePath -> FilePath-> IO ()
 downItAll (scrapID,pd@(ph,pid)) [] _ _ =  do
 		putStrLn "END"						
 		terminateTorInstance (scrapID,(ph,pid))
