@@ -74,10 +74,7 @@ entryPoint scrapID urls inFileName outFileName= do
 	terminateTorInstance (scrapID,pd)
 	
 
-main = do
-	[urls,inFileName,outFileName,scrapID] <- getArgs
-	entryPoint (read scrapID) (read urls) inFileName outFileName
-	putStrLn ("END")
+
 	
  {-
 --this main read input link from a file		

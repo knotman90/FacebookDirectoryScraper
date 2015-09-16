@@ -6,11 +6,11 @@ import Control.Monad
 import FacebookScraper
 import FacebookScraperGlobalDefinitions
 import FacebookDirectoryUtils
-import Data.Sequence as Seq
 import Prelude as Pre
 import System.Process (ProcessHandle)  
 import TorManager(getPid)
 import Data.List as List
+import Data.Sequence as Seq
 
 putListLn ::(Show a,Show b, Show c)=> [a] -> [b] -> c -> IO ()
 putListLn parameters parameterNames separator= do
@@ -42,6 +42,7 @@ type PROC_DESCRIPTOR = (ScraperID, (ProcessHandle, PID))
 masterLoop ::PROC_DESCRIPTOR -> [FBURI] -> Int -> Int -> Seq (Either ScraperID PROC_DESCRIPTOR) -> IO ()
 masterLoop _ [] _ _ _= return ()
 masterLoop pd l@(url:urls) numScrapers threasholdScrapLaunch processes = do
+		newProcesses <- getUpdateProcessSeq processes
 		let (offloadableURIs,notOffloadableURIs) = List.partition (canOffloadFBURI threasholdScrapLaunch) l
 		if Pre.length offloadableURIs < numScrapers 
 		then undefined --download some links from notOffloadableURIs
@@ -52,15 +53,20 @@ masterLoop pd l@(url:urls) numScrapers threasholdScrapLaunch processes = do
 					Nothing -> 	undefined								
 					-- process at index idx is ready to do some work
 					(Just idx) -> undefined --if canOffloadFBURI url
-					
---left means is not running
---right means is still running
-isProcessStillRunning :: PROC_DESCRIPTOR -> IO (Either ScraperID PROC_DESCRIPTOR)
-isProcessStillRunning pd@(scraperID, (ph, _)) =  do
-									exitCode <- getProcessExitCode ph
-									case exitCode  of
-										Nothing  -> return $ Right pd
-										_		 -> return $ Left  scraperID
+
+
+getUpdateProcessSeq :: Seq (Either ScraperID PROC_DESCRIPTOR) -> IO (Seq (Either ScraperID PROC_DESCRIPTOR))
+getUpdateProcessSeq processes =  mapM checkProcessState processes 
+	where	
+		--left me	ans is not running
+		--right means is still running
+		checkProcessState :: Either ScraperID PROC_DESCRIPTOR -> IO (Either ScraperID PROC_DESCRIPTOR)
+		checkProcessState (Right (pd@(scraperID, (ph, _)))) =  do
+											exitCode <- getProcessExitCode ph
+											case exitCode  of
+												Nothing  -> return $ Right pd
+												_		 -> return $ Left  scraperID
+		checkProcessState left				  = return left										
 			
 																
 		
