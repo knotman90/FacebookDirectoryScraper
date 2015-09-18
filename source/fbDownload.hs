@@ -1,22 +1,25 @@
-
 import DirectoryUtils
 import System.Environment (getArgs)
 import System.Process (proc,createProcess,getProcessExitCode)
-import Control.Monad
+import Control.Concurrent (threadDelay)
+import Text.Printf (printf)
+import Control.Monad as M
 import FacebookScraper
 import FacebookScraperGlobalDefinitions
 import FacebookDirectoryUtils
 import Prelude as Pre
 import System.Process (ProcessHandle)  
-import TorManager(getPid)
+import TorManager(getPid,startTorInstance,terminateTorInstance)
 import Data.List as List
 import Data.Sequence as Seq
+import Data.Traversable  as T  (mapM)
+import FacebookScraper (catchAny,downPageCurl)
 
 putListLn ::(Show a,Show b, Show c)=> [a] -> [b] -> c -> IO ()
 putListLn parameters parameterNames separator= do
 		let ll = Pre.zip parameterNames  parameters 
 		--mapM_  (printPairWithSeparator separator) ll
-		mapM_  printPair ll
+		Pre.mapM_  printPair ll
 
 printPair p = putStrLn $ show p
 
@@ -45,18 +48,87 @@ masterLoop pd l@(url:urls) numScrapers threasholdScrapLaunch processes = do
 		newProcesses <- getUpdateProcessSeq processes
 		let (offloadableURIs,notOffloadableURIs) = List.partition (canOffloadFBURI threasholdScrapLaunch) l
 		if Pre.length offloadableURIs < numScrapers 
-		then undefined --download some links from notOffloadableURIs
+		then undefined --download some links from notOffloadableURIs and recurse
 		else do --have enough links to feed processes
-				let idxTerminated = Seq.findIndexL (isLeft) processes
+				let idxTerminated = Seq.findIndexL (isLeft) processes --check if there is an idle process 
 				case idxTerminated of
 					--all process busy
-					Nothing -> 	undefined								
+					Nothing -> undefined	--wait random seconds and recurse								
 					-- process at index idx is ready to do some work
-					(Just idx) -> undefined --if canOffloadFBURI url
+					(Just idx)-> do
+						let offUri = head offloadableURIs
+						newProcPD<-offloadUri (offUri) idx
+						let processedUpdated =update idx (Right (idx,newProcPD)) processes
+						masterLoop pd (List.filter (/= offUri) l) numScrapers threasholdScrapLaunch processedUpdated  
+					--offload $ head offloadableURIs and recurse
 
 
+downloadLink :: PROC_DESCRIPTOR -> FBURI -> [FBURI]-> IO ([FBURI],PROC_DESCRIPTOR)
+downloadLink procDesc@(scrapID,pd@(ph,pid)) url downloaded = do
+	print ("Processing "++url)
+	delay <- (randomDelay)
+	printf "Waiting %d microseconds\n" ((delay))
+	threadDelay (delay)
+	html <- catchAny (downPageCurl (scrapID,pd)  url) $ \e -> do
+					putStrLn $ "Caught an exception: " ++ show e
+					return ""
+					
+	if (List.null html) 
+	then 
+		do
+			putStrLn "Trying to restart after exception"
+			restart
+	else
+		do		
+			links <- extractURIs html
+			let pageLinks = List.drop 3 links
+			case (List.null pageLinks) of
+				True ->restart
+				--everything seems ok -> return downloaded link
+				False-> return (newLinks links,procDesc)
+	
+	where 
+		newLinks pl 
+				|(List.length pl) >=2 = foldr (\v acc ->(fst v):acc) [] pl
+				|otherwise		= []
+		restart = do
+				terminateTorInstance (scrapID,(ph,pid))
+				pd'@(ph',pid')<-startTorInstance scrapID
+				downloadLink (scrapID,pd') url downloaded	
+	
+{- 
+downItAll (scrapID,pd@(ph,pid)) l@(url:urls) inFileName outFileName = do
+		
+		M.when (null html) $ do
+					putStrLn "Trying to restart after exception"
+					restart
+		
+		links <- extractURIs html
+		let pageLinks = drop 3 links
+		M.when (null pageLinks) (restart)		
+		if isLastLevel ( (snd.last) pageLinks ) 
+		then
+			do
+				appendLinksFile outFileName pageLinks			
+				downItAll (scrapID,pd) urls inFileName outFileName
+		else
+			do
+				print ("\t\t cd .RecursiveCall"++url)
+				writeFile inFileName ((show l))
+				downItAll (scrapID,pd) ((newLinks pageLinks)++urls) inFileName outFileName
+	where 
+		newLinks pl 
+			|(length pl) >=2 = foldr (\v acc ->(fst v):acc) [] pl
+			|otherwise		= []
+		restart = do
+			terminateTorInstance (scrapID,(ph,pid))
+			pd'@(ph',pid')<-startTorInstance scrapID
+			downItAll (scrapID,pd') l inFileName outFileName	
+
+ -}
+ 
 getUpdateProcessSeq :: Seq (Either ScraperID PROC_DESCRIPTOR) -> IO (Seq (Either ScraperID PROC_DESCRIPTOR))
-getUpdateProcessSeq processes =  mapM checkProcessState processes 
+getUpdateProcessSeq processes =  T.mapM checkProcessState processes 
 	where	
 		--left me	ans is not running
 		--right means is still running
@@ -70,8 +142,8 @@ getUpdateProcessSeq processes =  mapM checkProcessState processes
 			
 																
 		
-launchNewProcess :: FBURI -> ScraperID -> IO (ProcessHandle,PID)
-launchNewProcess uri scrapID = do
+offloadUri :: FBURI -> ScraperID -> IO (ProcessHandle,PID)
+offloadUri uri scrapID = do
 				(_,_,_,ph)<-createProcess (proc "ScraperWorker" [uri,"inputFile",getWorkerFileName uri,show scrapID])
 				(_,maybePid) <- getPid ph
 				case maybePid of 

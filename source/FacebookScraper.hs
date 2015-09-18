@@ -1,4 +1,4 @@
-module FacebookScraper (entryPoint)  where
+module FacebookScraper (entryPoint,randomDelay,downPageCurl,catchAny)  where
 
 import Network.URI
 import System.Random 
