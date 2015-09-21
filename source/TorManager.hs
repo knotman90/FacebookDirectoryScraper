@@ -36,7 +36,7 @@ getScraperControlPort scrapID = base_control_port+scrapID
 
 terminateTorInstance :: (ScraperID,(ProcessHandle,PID)) -> IO ()
 terminateTorInstance (scrapID,(ph,pid)) = do
-	putStrLn ("Terminating tor instance with PID"++(show pid))
+	putStrLn ("SCRAP:"++(show scrapID)++" :Terminating tor instance with PID"++(show pid))
 	--eraseDirectoryContent ("../data/tor"++(show scrapID))
 	terminateProcess ph
 	ec<-waitForProcess ph --used to not let OS create Zombie child process thah hang up in the processTable
@@ -48,7 +48,7 @@ dataFolderRoot = "/home/knotman/git/FacebookDirectoryScraper/work/data/tor"
 
 startTorInstance :: ScraperID -> IO (ProcessHandle,PID)
 startTorInstance scrapID = do
-	putStrLn "Starting TOR"
+	putStrLn ("SCRAP:"++(show scrapID)++" :Starting TOR")
 	tmp <- openFile "/dev/null" WriteMode
 	(_,_,_,ph) <-createProcess (proc "tor" torArgs)	
 										-- {-	
@@ -63,10 +63,10 @@ startTorInstance scrapID = do
 		Nothing -> do
 					--highly dangerous
 					(_,Just pid) <- getPid ph
-					putStrLn ("Tor Instance "++(show scrapID)++" started succesfully with PID="++(show pid))
+					putStrLn ("SCRAP:"++(show scrapID)++" :Tor Instance started succesfully with PID="++(show pid))
 					return (ph,read (show pid))
 		(Just n) -> do
-					putStrLn ("Error Starting tor. Error code:"++(show n)++"\n RESTARTING")
+					putStrLn ("SCRAP:"++(show scrapID)++" :Error Starting tor. Error code:"++(show n)++"\n RESTARTING")
 					startTorInstance scrapID	
 		-- (Just n) 	-> error ("Error Starting tor. Error code:"++(show n))
 	

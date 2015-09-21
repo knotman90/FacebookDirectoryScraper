@@ -94,22 +94,22 @@ main = do
 catchAny :: IO a -> (SomeException -> IO a) -> IO a
 catchAny = Control.Exception.catch
 
-downItAll :: (PID, (ProcessHandle, Int)) -> [FBURI] -> FilePath -> FilePath-> IO ()
+downItAll :: (ScraperID, (ProcessHandle, PID)) -> [FBURI] -> FilePath -> FilePath-> IO ()
 downItAll (scrapID,pd@(ph,pid)) [] _ _ =  do
 		putStrLn "END"						
 		terminateTorInstance (scrapID,(ph,pid))
 downItAll (scrapID,pd@(ph,pid)) l@(url:urls) inFileName outFileName = do
-		print ("Processing "++url)
+		print ("SCRAP:"++(show scrapID)++" :Processing "++url)
 		delay <- (randomDelay)
-		printf "Waiting %d microseconds\n" ((delay))
+		printf ("SCRAP:"++(show scrapID)++" :Waiting %d microseconds\n") ((delay))
 		threadDelay (delay)
 		html <- catchAny (downPageCurl (scrapID,pd)  url) $ \e -> do
-					putStrLn $ "Caught an exception: " ++ show e
+					putStrLn $ "SCRAP:"++(show scrapID)++" :Caught an exception: " ++ show e
 					writeFile inFileName ((show l))
 					return ""
 		
 		M.when (null html) $ do
-					putStrLn "Trying to restart after exception"
+					putStrLn ("SCRAP:"++(show scrapID)++" :Trying to restart after exception")
 					restart
 		
 		links <- extractURIs html
@@ -122,7 +122,7 @@ downItAll (scrapID,pd@(ph,pid)) l@(url:urls) inFileName outFileName = do
 				downItAll (scrapID,pd) urls inFileName outFileName
 		else
 			do
-				print ("\t\t cd .RecursiveCall"++url)
+				print ("SCRAP:"++(show scrapID)++" :RecursiveCall"++url)
 				writeFile inFileName ((show l))
 				downItAll (scrapID,pd) ((newLinks pageLinks)++urls) inFileName outFileName
 	where 
