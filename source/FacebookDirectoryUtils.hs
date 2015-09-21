@@ -1,4 +1,4 @@
-module FacebookDirectoryUtils (extractURIs,isLastLevel,readURIFromFile,getNumberOfLinkedURI,getWorkerFileName)
+module FacebookDirectoryUtils --(extractURIs,isLastLevel,readURIFromFile,getNumberOfLinkedURI,getWorkerFileName)
  where
 
 import Text.XML.HXT.Core
@@ -24,14 +24,15 @@ readURIFromFile fp = do
 
 
 --https://www.facebook.com/directory/people/A-96185041-98148000
-getNumberOfLinkedURI ::(Integral a,Read a) => FBURI -> a
+getNumberOfLinkedURI ::FBURI -> Int
 getNumberOfLinkedURI uri =  (read (tail right)) -(read left)
 	where 
-		(right,left)= getUriInterval uri
+		(left,right)= getUriInterval uri
 
 
 getWorkerFileName :: FBURI -> String
-getWorkerFileName uri = show $ getUriInterval uri
+getWorkerFileName uri = "out_"++(fst int)++"-"++(snd int)
+	where int= getUriInterval uri
 
 
 getUriInterval uri = 	let si = tail $ dropWhile (/= '-') uri -- ([0-9]*)-([0-9]*) 

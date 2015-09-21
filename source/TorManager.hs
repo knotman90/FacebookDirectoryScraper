@@ -1,17 +1,21 @@
 module TorManager where
 
-import System.Process			(	createProcess,
+import System.IO
+import System.Process	{-		(	createProcess,
 									waitForProcess,
 									terminateProcess,
 									proc,
 									getProcessExitCode,
-									ProcessHandle
-								)
+									ProcessHandle,
+									StdStream( UseHandle ),
+									CreateProcess
+								)-}
 								
-import System.Process.Internals (	withProcessHandle,
+import System.Process.Internals {-(	withProcessHandle,
 									ProcessHandle__(OpenHandle,ClosedHandle),
 									PHANDLE
 								)
+								-}
 								
 import Control.Concurrent (threadDelay)
 
@@ -40,11 +44,19 @@ terminateTorInstance (scrapID,(ph,pid)) = do
 	return ()
 
 
+dataFolderRoot = "/home/knotman/git/FacebookDirectoryScraper/work/data/tor"
 
 startTorInstance :: ScraperID -> IO (ProcessHandle,PID)
 startTorInstance scrapID = do
 	putStrLn "Starting TOR"
-	(_,_,_,ph) <-createProcess (proc "tor" torArgs)
+	tmp <- openFile "/dev/null" WriteMode
+	(_,_,_,ph) <-createProcess (proc "tor" torArgs)	
+										-- {-	
+										{
+											std_out = UseHandle tmp,
+											std_err = UseHandle tmp
+											}
+										--	-}
 	threadDelay (5*10^6)
 	exitCode <- getProcessExitCode ph
 	case exitCode of
@@ -59,7 +71,7 @@ startTorInstance scrapID = do
 		-- (Just n) 	-> error ("Error Starting tor. Error code:"++(show n))
 	
 	where 
-		torArgs = ["--RunAsDaemon","0","--CookieAuthentication", "0","--HashedControlPassword","","--ControlPort",show (getScraperControlPort scrapID),"--PidFile",pidFile,"--SocksPort",show (getScraperSocksPort scrapID),"--DataDirectory","../data/tor"++(show scrapID)]
+		torArgs = ["--RunAsDaemon","0","--CookieAuthentication", "0","--HashedControlPassword","","--ControlPort",show (getScraperControlPort scrapID),"--PidFile",pidFile,"--SocksPort",show (getScraperSocksPort scrapID),"--DataDirectory",dataFolderRoot++(show scrapID)]
 		pidFile = let s ="tor"++(show scrapID)	in s++"/"++s++".pid"
 	  
 getPid ph =  withProcessHandle ph getPID_    

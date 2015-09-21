@@ -76,14 +76,14 @@ entryPoint scrapID urls inFileName outFileName= do
 
 
 	
- {-
+
 --this main read input link from a file		
 main = do
 	[inFileName,outFileName,scrapID] <- getArgs
 	queue <- readURIFromFile inFileName
 	entryPoint (read scrapID) (queue) inFileName outFileName
 	putStrLn ("END")
-	-}
+
 
 
 
