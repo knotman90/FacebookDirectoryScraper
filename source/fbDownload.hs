@@ -158,13 +158,13 @@ isLeft _ 		= False
 
 --testDownloadLink 0
 main = do	
-		[numScrapers,scraperRoot,threasholdScrapLaunch]<-getArgs
+		[numScrapers,scraperRoot,threasholdScrapLaunch,startingURL]<-getArgs
 		scraperAbsRoot <- absolutize scraperRoot
 		let params = [numScrapers,scraperAbsRoot,threasholdScrapLaunch]
 		putStrLn "Facebook Directory Downloader"
 		putListLn params parameterNames ":"
 		pd@(ph,pid) <- startTorInstance 0
-		masterLoop (0,pd) ["https://www.facebook.com/directory/people/R-40723081-41491440"] (read numScrapers) (read threasholdScrapLaunch) (fromFunction (read numScrapers) (\l->Left l))
+		masterLoop (0,pd) [startingURL] (read numScrapers) (read threasholdScrapLaunch) (fromFunction (read numScrapers) (\l->Left l))
 		terminateTorInstance (0,pd)
 		--masterLoop ::PROC_DESCRIPTOR -> [FBURI] -> Int -> Int -> Seq (Either ScraperID PROC_DESCRIPTOR) -> IO ()
 --entryPoint :: ScarperID ->()
