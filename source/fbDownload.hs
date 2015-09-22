@@ -164,7 +164,7 @@ main = do
 		putStrLn "Facebook Directory Downloader"
 		putListLn params parameterNames ":"
 		pd@(ph,pid) <- startTorInstance 0
-		masterLoop (0,pd) ["https://www.facebook.com/directory/people/S-85070401-86220000"] (read numScrapers) (read threasholdScrapLaunch) (fromFunction (read numScrapers) (\l->Left l))
+		masterLoop (0,pd) ["https://www.facebook.com/directory/people/R-40723081-41491440"] (read numScrapers) (read threasholdScrapLaunch) (fromFunction (read numScrapers) (\l->Left l))
 		terminateTorInstance (0,pd)
 		--masterLoop ::PROC_DESCRIPTOR -> [FBURI] -> Int -> Int -> Seq (Either ScraperID PROC_DESCRIPTOR) -> IO ()
 --entryPoint :: ScarperID ->()

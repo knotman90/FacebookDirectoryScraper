@@ -5,6 +5,7 @@ import Text.XML.HXT.Core
 import Text.HandsomeSoup
 import Data.List (elemIndex)
 import FacebookScraperGlobalDefinitions(FBURI)
+import Data.List (isInfixOf)
 
 extractURIs :: String -> IO [(String, String)]
 extractURIs html= do
@@ -14,7 +15,7 @@ extractURIs html= do
 
 
 isLastLevel :: String -> Bool	
-isLastLevel name = not $ elem '-' name
+isLastLevel name = not $ (elem '-' name) || ("\8211" `isInfixOf` name)
 
 
 readURIFromFile :: FilePath -> IO [String]
@@ -25,7 +26,9 @@ readURIFromFile fp = do
 
 --https://www.facebook.com/directory/people/A-96185041-98148000
 getNumberOfLinkedURI ::FBURI -> Int
-getNumberOfLinkedURI uri =  (read (tail right)) -(read left)
+getNumberOfLinkedURI uri =  if (null left) || (null right)
+							then (maxBound :: Int)
+							else (read (tail right)) -(read left)
 	where 
 		(left,right)= getUriInterval uri
 
