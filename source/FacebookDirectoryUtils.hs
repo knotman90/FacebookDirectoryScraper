@@ -15,7 +15,7 @@ extractURIs html= do
 
 
 isLastLevel :: String -> Bool	
-isLastLevel name = not $ (elem '-' name) || ("\8211" `isInfixOf` name)
+isLastLevel name = not $ (elem '-' name) || ("\8211" `isInfixOf` name) ||  ("\12316" `isInfixOf` name)
 
 
 readURIFromFile :: FilePath -> IO [String]
@@ -26,9 +26,9 @@ readURIFromFile fp = do
 
 --https://www.facebook.com/directory/people/A-96185041-98148000
 getNumberOfLinkedURI ::FBURI -> Int
-getNumberOfLinkedURI uri =  if (null left) || (null right)
-							then (maxBound :: Int)
-							else (read (tail right)) -(read left)
+getNumberOfLinkedURI uri =  if not ((null left) || (null right))
+							then (read (tail right)) -(read left)
+							else (1000000)  --substitute with Int bound
 	where 
 		(left,right)= getUriInterval uri
 
@@ -38,7 +38,11 @@ getWorkerFileName uri = "out_"++(fst int)++"-"++(snd int)
 	where int= getUriInterval uri
 
 
-getUriInterval uri = 	let si = tail $ dropWhile (/= '-') uri -- ([0-9]*)-([0-9]*) 
+getUriInterval uri = if not $isLastLevel uri 
+					then
+						let si = tail $ dropWhile (/= '-') uri -- ([0-9]*)-([0-9]*) 
 						in 	
 							let (Just idx)=(elemIndex '-' si) --not safe! Nothing patter not covered
 							in splitAt  idx si 
+					else
+						([],[])

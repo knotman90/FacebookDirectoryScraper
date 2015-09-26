@@ -30,7 +30,7 @@ printPairWithSeparator sep (f,s) = do
 		putStrLn ss
 
 parameterNames :: [String]
-parameterNames = ["Number of Concurrent scrapers","Scrapers root directory","Threashold for scrapers startup"]
+parameterNames = ["Number of Concurrent scrapers","Scrapers root directory","Threashold for scrapers startup", "Starting URL"]
 
 {-
 mayLaunchParallelWork :: Int -> Int ->[FBURI] -> Bool
@@ -44,14 +44,13 @@ canOffloadFBURI threasholdScrapLaunch e = ((getNumberOfLinkedURI e) <= threashol
 type PROC_DESCRIPTOR = (ScraperID, (ProcessHandle, PID))
 
 
-masterLoop ::PROC_DESCRIPTOR -> [FBURI] -> Int -> Int -> Seq (Either ScraperID PROC_DESCRIPTOR) -> IO ()
-masterLoop (scrapID,pd) [] _ _ _= do
+masterLoop ::PROC_DESCRIPTOR -> ([FBURI],[FBURI]) -> Int -> Int -> Seq (Either ScraperID PROC_DESCRIPTOR) -> IO ()
+masterLoop (scrapID,pd) ([],[]) _ _ _= do
 						putStrLn "Master process END"
 						terminateTorInstance (scrapID,pd)
 						return ()
-masterLoop pd l@(url:urls) numScrapers threasholdScrapLaunch processes = do
+masterLoop pd l@(offloadableURIs,notOffloadableURIs) numScrapers threasholdScrapLaunch processes = do
 		newProcesses <- getUpdateProcessSeq processes
-		let (offloadableURIs,notOffloadableURIs) = List.partition (canOffloadFBURI threasholdScrapLaunch) l
 		putStrLn "Started"
 		if Pre.length offloadableURIs < numScrapers && Pre.length notOffloadableURIs > 0
 		then  do --download some links from notOffloadableURIs and recurse
@@ -59,7 +58,8 @@ masterLoop pd l@(url:urls) numScrapers threasholdScrapLaunch processes = do
 				(downloaded,pd'@(scrapID,newProc))<-downloadLink pd (head notOffloadableURIs) []
 				let newUrls  = List.drop 3 downloaded
 				putStrLn ("Added"++(show (List.length newUrls)))
-				masterLoop pd' (concat [offloadableURIs,(safeTail notOffloadableURIs),newUrls]) numScrapers threasholdScrapLaunch newProcesses
+				let (newOff,newNotOff) = List.partition (canOffloadFBURI threasholdScrapLaunch) newUrls
+				masterLoop pd' (concat [offloadableURIs,newOff],(concat [safeTail notOffloadableURIs,newNotOff])) numScrapers threasholdScrapLaunch newProcesses
 		else do --have enough links to feed processes
 				let idxTerminated = Seq.findIndexL (isLeft) processes --check if there is an idle process 
 				case idxTerminated of
@@ -74,7 +74,7 @@ masterLoop pd l@(url:urls) numScrapers threasholdScrapLaunch processes = do
 						putStrLn ("Offloading on processor "++(show (idx+1))++"the url"++(show (offUri)))
 						newProcPD<-offloadUri (offUri) (idx+1)
 						let processedUpdated =update idx (Right (idx,newProcPD)) processes
-						masterLoop pd (List.filter (/= offUri) l) numScrapers threasholdScrapLaunch processedUpdated  
+						masterLoop pd (tail offloadableURIs,notOffloadableURIs) numScrapers threasholdScrapLaunch processedUpdated  
 	where
 		safeTail = List.drop 1
 		safeHead = List.take 1
@@ -160,11 +160,11 @@ isLeft _ 		= False
 main = do	
 		[numScrapers,scraperRoot,threasholdScrapLaunch,startingURL]<-getArgs
 		scraperAbsRoot <- absolutize scraperRoot
-		let params = [numScrapers,scraperAbsRoot,threasholdScrapLaunch]
+		let params = [numScrapers,scraperAbsRoot,threasholdScrapLaunch,startingURL]
 		putStrLn "Facebook Directory Downloader"
 		putListLn params parameterNames ":"
 		pd@(ph,pid) <- startTorInstance 0
-		masterLoop (0,pd) [startingURL] (read numScrapers) (read threasholdScrapLaunch) (fromFunction (read numScrapers) (\l->Left l))
+		masterLoop (0,pd) ([],[startingURL]) (read numScrapers) (read threasholdScrapLaunch) (fromFunction (read numScrapers) (\l->Left l))
 		terminateTorInstance (0,pd)
 		--masterLoop ::PROC_DESCRIPTOR -> [FBURI] -> Int -> Int -> Seq (Either ScraperID PROC_DESCRIPTOR) -> IO ()
 --entryPoint :: ScarperID ->()

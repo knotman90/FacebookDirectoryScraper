@@ -105,7 +105,7 @@ downItAll (scrapID,pd@(ph,pid)) l@(url:urls) inFileName outFileName = do
 		threadDelay (delay)
 		html <- catchAny (downPageCurl (scrapID,pd)  url) $ \e -> do
 					putStrLn $ "SCRAP:"++(show scrapID)++" :Caught an exception: " ++ show e
-					writeFile inFileName ((show l))
+					--writeFile inFileName ((show l))
 					return ""
 		
 		M.when (null html) $ do
