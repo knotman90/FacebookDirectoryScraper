@@ -33,6 +33,19 @@ getNumberOfLinkedURI uri =  if not ((null left) || (null right))
 		(left,right)= getUriInterval uri
 
 
+createLinkFromFileName :: String -> Char -> FBURI
+createLinkFromFileName s letter= base ++ [letter] ++ "-" ++ left ++ (drop 1 right)
+	where 
+		(left,right) = let (Just idx) = (elemIndex '-' si) in splitAt idx si
+		si = drop 6 s
+		base= "https://www.facebook.com/directory/people/"
+		
+createListOfReDownload filename =do
+	str <- readFile filename
+	let names = lines str
+	return $ map createLinkFromFileName names
+
+
 getWorkerFileName :: FBURI -> String
 getWorkerFileName uri = "out_"++(fst int)++"-"++(snd int)
 	where int= getUriInterval uri
