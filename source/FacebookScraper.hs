@@ -123,7 +123,7 @@ downItAll (scrapID,pd@(ph,pid)) l@(url:urls) inFileName outFileName = do
 		else
 			do
 				print ("SCRAP:"++(show scrapID)++" :RecursiveCall"++url)
-				writeFile inFileName ((show l))
+				writeFile inFileName ((unlines l))
 				downItAll (scrapID,pd) ((newLinks pageLinks)++urls) inFileName outFileName
 	where 
 		newLinks pl 
