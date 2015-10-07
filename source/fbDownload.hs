@@ -15,7 +15,7 @@ import Data.Sequence as Seq
 import Data.Traversable  as T  (mapM)
 import Data.Foldable(toList)
 import FacebookScraper (catchAny,downPageCurl)
-import ScraperConfiguration (scrapUppBoundWaitSec)
+import ScraperConfiguration (scrapUppBoundWaitSec,pathScraperWorkerExe)
 
 
 putListLn ::(Show a,Show b, Show c)=> [a] -> [b] -> c -> IO ()
@@ -143,7 +143,7 @@ getUpdateProcessSeq processes =  T.mapM checkProcessState processes
 		checkProcessState left				  = return left										
 			
 																
-pathScraperWorkerExe = "/home/knotman/git/FacebookDirectoryScraper/dist/build/ScraperWorker/ScraperWorker"
+
 
 offloadUri :: FBURI -> ScraperID -> IO (ProcessHandle,PID)
 offloadUri uri scrapID = do

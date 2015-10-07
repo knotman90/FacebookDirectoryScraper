@@ -7,7 +7,7 @@ base_socks_port :: Int
 base_socks_port=9050
 
 
-
+pathScraperWorkerExe = "/home/knotman/git/FacebookDirectoryScraper/dist/build/ScraperWorker/ScraperWorker"
 dataFolderRoot = "/home/knotman/git/FacebookDirectoryScraper/work/data/tor"
 
 verbose = True

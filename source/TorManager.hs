@@ -67,7 +67,7 @@ startTorInstance :: ScraperID -> IO (ProcessHandle,PID)
 startTorInstance scrapID = do
 	printVerbose ("SCRAP:"++(show scrapID)++" :Starting TOR")
 	tmp <- openFile "/dev/null" WriteMode
-	ph 	<- createTorProcess verbose torArgs								
+	ph 	<- createTorProcess False torArgs								
 	threadDelay (torDelayStartSec)
 	exitCode <- getProcessExitCode ph
 	case exitCode of
