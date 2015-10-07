@@ -22,6 +22,7 @@ import FacebookScraperGlobalDefinitions
 
 import NetUtils
 
+import ScraperConfiguration
 
 
 --in microseconds
@@ -99,9 +100,9 @@ downItAll (scrapID,pd@(ph,pid)) [] _ _ =  do
 		putStrLn "END"						
 		terminateTorInstance (scrapID,(ph,pid))
 downItAll (scrapID,pd@(ph,pid)) l@(url:urls) inFileName outFileName = do
-		print ("SCRAP:"++(show scrapID)++" :Processing "++url)
+		printVerbose ("SCRAP:"++(show scrapID)++" :Processing "++url)
 		delay <- (randomDelay)
-		printf ("SCRAP:"++(show scrapID)++" :Waiting %d microseconds\n") ((delay))
+		printVerbose ("SCRAP:"++(show scrapID)++" :Waiting"++ (show delay) ++" microseconds\n")
 		threadDelay (delay)
 		html <- catchAny (downPageCurl (scrapID,pd)  url) $ \e -> do
 					putStrLn $ "SCRAP:"++(show scrapID)++" :Caught an exception: " ++ show e
@@ -109,7 +110,7 @@ downItAll (scrapID,pd@(ph,pid)) l@(url:urls) inFileName outFileName = do
 					return ""
 		
 		M.when (null html) $ do
-					putStrLn ("SCRAP:"++(show scrapID)++" :Trying to restart after exception")
+					printVerbose ("SCRAP:"++(show scrapID)++" :Trying to restart after exception")
 					restart
 		
 		links <- extractURIs html
@@ -122,7 +123,7 @@ downItAll (scrapID,pd@(ph,pid)) l@(url:urls) inFileName outFileName = do
 				downItAll (scrapID,pd) urls inFileName outFileName
 		else
 			do
-				print ("SCRAP:"++(show scrapID)++" :RecursiveCall"++url)
+				printVerbose ("SCRAP:"++(show scrapID)++" :RecursiveCall"++url)
 				writeFile inFileName ((unlines l))
 				downItAll (scrapID,pd) ((newLinks pageLinks)++urls) inFileName outFileName
 	where 

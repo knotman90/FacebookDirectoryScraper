@@ -1,72 +1,83 @@
 module TorManager where
 
 import System.IO
-import System.Process	{-		(	createProcess,
+import System.Process			(	createProcess,
 									waitForProcess,
 									terminateProcess,
 									proc,
 									getProcessExitCode,
 									ProcessHandle,
 									StdStream( UseHandle ),
-									CreateProcess
-								)-}
+									CreateProcess(std_out,std_err)
+								)
 								
-import System.Process.Internals {-(	withProcessHandle,
+import System.Process.Internals (	withProcessHandle,
 									ProcessHandle__(OpenHandle,ClosedHandle),
 									PHANDLE
 								)
-								-}
+								
 								
 import Control.Concurrent (threadDelay)
 
 import FacebookScraperGlobalDefinitions
 
-base_socks_port :: Int
-base_socks_port=9050
+import ScraperConfiguration
 
+{-----------------------------------------------------
+Each Scraper work on a differe tor instance in order 
+to use a differe tor circuitEach scraper instance 
+has its own scraper number. 
+The following functions are used to retrive
+the per scrap tor ports. -}
 getScraperSocksPort:: Int -> Int
 getScraperSocksPort scrapID = base_socks_port+scrapID
-
-base_control_port :: Int
-base_control_port=8118
 
 getScraperControlPort :: Int -> Int
 getScraperControlPort scrapID = base_control_port+scrapID
 
 
+
 terminateTorInstance :: (ScraperID,(ProcessHandle,PID)) -> IO ()
 terminateTorInstance (scrapID,(ph,pid)) = do
-	putStrLn ("SCRAP:"++(show scrapID)++" :Terminating tor instance with PID"++(show pid))
+	printVerbose ("SCRAP:"++(show scrapID)++" :Terminating tor instance with PID"++(show pid))
 	--eraseDirectoryContent ("../data/tor"++(show scrapID))
 	terminateProcess ph
 	ec<-waitForProcess ph --used to not let OS create Zombie child process thah hang up in the processTable
-	putStrLn ("Terminating tor instance with PID"++(show pid)++" with exit code:"++(show ec))
+	printVerbose ("Terminating tor instance with PID"++(show pid)++" with exit code:"++(show ec))
 	return ()
 
 
-dataFolderRoot = "/home/knotman/git/FacebookDirectoryScraper/work/data/tor"
+createTorProcess :: IsVerbose -> [String]-> IO ProcessHandle
+createTorProcess verbose torArgs 
+	| verbose = do
+		(_,_,_,torph) <-torProc
+		return torph
+	| otherwise = do --non verbose -> redirecting stderr and out to dev/null
+		tmp <- openFile "/dev/null" WriteMode
+		(_,_,_,torph) <- createProcess (proc "tor" torArgs){	std_out = UseHandle tmp,
+																std_err = UseHandle tmp	}
+		return torph
+	where
+		 torProc= createProcess (proc "tor" torArgs)
+	
+	
+
 
 startTorInstance :: ScraperID -> IO (ProcessHandle,PID)
 startTorInstance scrapID = do
-	putStrLn ("SCRAP:"++(show scrapID)++" :Starting TOR")
+	printVerbose ("SCRAP:"++(show scrapID)++" :Starting TOR")
 	tmp <- openFile "/dev/null" WriteMode
-	(_,_,_,ph) <-createProcess (proc "tor" torArgs)	
-										-- {-	
-										{
-											std_out = UseHandle tmp,
-											std_err = UseHandle tmp
-											}
-										--	-}
-	threadDelay (5*10^6)
+	ph 	<- createTorProcess verbose torArgs								
+	threadDelay (torDelayStartSec)
 	exitCode <- getProcessExitCode ph
 	case exitCode of
 		Nothing -> do
 					--highly dangerous
 					(_,Just pid) <- getPid ph
-					putStrLn ("SCRAP:"++(show scrapID)++" :Tor Instance started succesfully with PID="++(show pid))
+					printVerbose ("SCRAP:"++(show scrapID)++" :Tor Instance started succesfully with PID="++(show pid))
 					return (ph,read (show pid))
 		(Just n) -> do
-					putStrLn ("SCRAP:"++(show scrapID)++" :Error Starting tor. Error code:"++(show n)++"\n RESTARTING")
+					printVerbose ("SCRAP:"++(show scrapID)++" :Error Starting tor. Error code:"++(show n)++"\n RESTARTING")
 					startTorInstance scrapID	
 		-- (Just n) 	-> error ("Error Starting tor. Error code:"++(show n))
 	

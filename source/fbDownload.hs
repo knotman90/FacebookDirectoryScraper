@@ -15,6 +15,8 @@ import Data.Sequence as Seq
 import Data.Traversable  as T  (mapM)
 import Data.Foldable(toList)
 import FacebookScraper (catchAny,downPageCurl)
+import ScraperConfiguration (scrapUppBoundWaitSec)
+
 
 putListLn ::(Show a,Show b, Show c)=> [a] -> [b] -> c -> IO ()
 putListLn parameters parameterNames separator= do
@@ -66,7 +68,7 @@ masterLoop pd l@(offloadableURIs,notOffloadableURIs) numScrapers threasholdScrap
 					--all process busy
 					Nothing -> do --wait random seconds and recurse	
 						putStrLn "No available process. Waiting in IDLE state"
-						threadDelay (5*10^6)
+						threadDelay (scrapUppBoundWaitSec)
 						masterLoop pd l numScrapers threasholdScrapLaunch newProcesses
 					-- process at index idx is ready to do some work
 					(Just idx)-> do

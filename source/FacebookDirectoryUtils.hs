@@ -6,6 +6,7 @@ import Text.HandsomeSoup
 import Data.List (elemIndex)
 import FacebookScraperGlobalDefinitions(FBURI)
 import Data.List (isInfixOf)
+import ScraperConfiguration (intUpperBound)
 
 extractURIs :: String -> IO [(String, String)]
 extractURIs html= do
@@ -28,7 +29,7 @@ readURIFromFile fp = do
 getNumberOfLinkedURI ::FBURI -> Int
 getNumberOfLinkedURI uri =  if not ((null left) || (null right))
 							then (read (tail right)) -(read left)
-							else (1000000)  --substitute with Int bound
+							else (intUpperBound)  --substitute with Int bound
 	where 
 		(left,right)= getUriInterval uri
 
@@ -40,10 +41,10 @@ createLinkFromFileName s letter= base ++ [letter] ++ "-" ++ left ++ (drop 1 righ
 		si = drop 6 s
 		base= "https://www.facebook.com/directory/people/"
 		
-createListOfReDownload filename =do
+createListOfReDownload filename  c=do
 	str <- readFile filename
 	let names = lines str
-	return $ map createLinkFromFileName names
+	return $ map (createLinkFromFileName ) names
 
 
 getWorkerFileName :: FBURI -> String
